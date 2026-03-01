@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>九九面積グラデーション</title>
+  <!-- Tailwind CSSの読み込み -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* 縦書き用の設定などを少し補強 */
+    .vertical-rl {
+      writing-mode: vertical-rl;
+    }
+  </style>
+</head>
+<body class="bg-neutral-900 text-neutral-100 font-sans overflow-hidden">
+
+  <div class="h-screen w-full p-4 md:p-8 flex flex-col md:flex-row items-center justify-center gap-8 md:gap-16">
+    
+    <!-- 左側：メインの面積グリッド -->
+    <div class="w-full md:w-[55%] flex justify-center items-center h-full max-h-[90vh] p-6 md:p-12">
+      <div class="relative w-full max-w-[80vh] aspect-square">
+        
+        <!-- 横軸ラベル：かける数 -->
+        <div class="absolute -top-6 md:-top-8 left-0 w-full flex items-center justify-center text-neutral-400 font-bold tracking-widest text-sm md:text-base">
+          かける数<span class="ml-2 font-serif">→</span>
+        </div>
+
+        <!-- 縦軸ラベル：かけられる数 -->
+        <div class="absolute top-0 -left-6 md:-left-10 h-full flex items-center justify-center text-neutral-400 font-bold tracking-widest text-sm md:text-base vertical-rl">
+          かけられる数（段）<span class="mt-2 font-serif">→</span>
+        </div>
+
+        <!-- グリッドコンテナ -->
+        <div id="grid-container" class="w-full h-full bg-neutral-800 p-[2px] rounded-sm shadow-2xl relative"
+             style="display: grid; grid-template-columns: repeat(45, minmax(0, 1fr)); grid-template-rows: repeat(45, minmax(0, 1fr)); gap: 2px;">
+          <!-- JSで動的にセルが生成されます -->
+        </div>
+      </div>
+    </div>
+
+    <!-- 右側：ヘッダー・コントローラー領域 -->
+    <div class="w-full md:w-[40%] max-w-md flex flex-col gap-6 h-full justify-center">
+      <div class="flex flex-col gap-2 mb-2">
+         <h1 class="text-3xl font-bold text-neutral-300">九九面積グラデーション</h1>
+         <p class="text-neutral-500 text-sm leading-relaxed">
+           各マスの幅と高さは、かける数・かけられる数に比例しています。面積の大きさがそのまま答えの大きさになります。
+         </p>
+      </div>
+      
+      <!-- 段の選択ボタン群 -->
+      <div id="row-buttons" class="grid grid-cols-3 gap-3">
+        <!-- JSで動的にボタンが生成されます -->
+      </div>
+      <button id="show-all-btn" class="col-span-3 py-3 rounded-lg font-bold text-lg transition-all mt-1 bg-neutral-800 text-neutral-400 hover:bg-neutral-700">
+        全体を見る
+      </button>
+
+      <!-- 連動表示・ナビゲーション領域 -->
+      <div id="formula-container" class="transition-opacity duration-300 mt-4 opacity-100">
+        <div class="flex flex-col items-center gap-6 bg-neutral-800/50 p-6 rounded-2xl border border-neutral-700">
+          
+          <!-- 式の表示 -->
+          <div class="text-5xl md:text-6xl font-mono font-bold tracking-widest flex items-center justify-center gap-2 md:gap-4 w-full">
+            <span id="formula-row" class="text-neutral-400 w-12 md:w-16 text-right flex-shrink-0">1</span>
+            <span class="text-neutral-500 text-3xl md:text-4xl flex-shrink-0">×</span>
+            <span id="formula-col" class="text-blue-400 w-12 md:w-16 text-center flex-shrink-0">1</span>
+            <span class="text-neutral-500 text-3xl md:text-4xl flex-shrink-0">=</span>
+            <span id="formula-result" class="text-white bg-neutral-800 flex items-center justify-center rounded-xl border border-neutral-600 shadow-inner w-28 h-16 md:w-36 md:h-24 flex-shrink-0">
+              1
+            </span>
+          </div>
+
+          <!-- コントロールボタン -->
+          <div class="flex items-center justify-center gap-4 w-full">
+            <button id="prev-btn" class="p-3 rounded-full bg-neutral-800 hover:bg-neutral-700 disabled:opacity-30 transition-colors">
+              <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+            </button>
+            
+            <button id="play-btn" class="flex items-center justify-center gap-2 flex-1 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold text-lg transition-colors">
+              <svg id="play-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="6 3 20 12 6 21 6 3"/></svg>
+              <svg id="pause-icon" class="hidden" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="14" y="4" width="4" height="16" rx="1"/><rect x="6" y="4" width="4" height="16" rx="1"/></svg>
+              <span id="play-text">自動で進む</span>
+            </button>
+
+            <button id="next-btn" class="p-3 rounded-full bg-neutral-800 hover:bg-neutral-700 disabled:opacity-30 transition-colors">
+              <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // 状態管理
+    let activeRow = 1;
+    let focusedCol = 1;
+    let isPlaying = false;
+    let showAll = false;
+    let playTimer = null;
+
+    // DOM要素の取得
+    const gridContainer = document.getElementById('grid-container');
+    const rowButtonsContainer = document.getElementById('row-buttons');
+    const showAllBtn = document.getElementById('show-all-btn');
+    const formulaContainer = document.getElementById('formula-container');
+    const formulaRow = document.getElementById('formula-row');
+    const formulaCol = document.getElementById('formula-col');
+    const formulaResult = document.getElementById('formula-result');
+    const prevBtn = document.getElementById('prev-btn');
+    const playBtn = document.getElementById('play-btn');
+    const nextBtn = document.getElementById('next-btn');
+    const playIcon = document.getElementById('play-icon');
+    const pauseIcon = document.getElementById('pause-icon');
+    const playText = document.getElementById('play-text');
+
+    // 色の計算ロジック
+    function getCellColor(row, col) {
+      const hue = (col * 35 - 20) + (row * 5);
+      const lightness = 65 - (row * 2);
+      return `hsl(${hue}, 85%, ${lightness}%)`;
+    }
+
+    // 初期化関数
+    function init() {
+      // 1. 段選択ボタンの生成
+      for (let i = 1; i <= 9; i++) {
+        const btn = document.createElement('button');
+        btn.textContent = `${i}の段`;
+        btn.onclick = () => {
+          activeRow = i;
+          focusedCol = 1;
+          isPlaying = false;
+          showAll = false;
+          render();
+        };
+        rowButtonsContainer.appendChild(btn);
+      }
+
+      // 2. グリッドセルの生成
+      for (let row = 1; row <= 9; row++) {
+        for (let col = 1; col <= 9; col++) {
+          const value = row * col;
+          const cell = document.createElement('div');
+          
+          cell.style.gridRow = `span ${row}`;
+          cell.style.gridColumn = `span ${col}`;
+          cell.style.backgroundColor = getCellColor(row, col);
+          cell.style.backgroundImage = `
+            linear-gradient(to right, rgba(0, 0, 0, 0.15) 1px, transparent 1px),
+            linear-gradient(to bottom, rgba(0, 0, 0, 0.15) 1px, transparent 1px)
+          `;
+          cell.style.backgroundSize = `${100 / col}% ${100 / row}%`;
+
+          // クリックイベント
+          cell.onclick = () => {
+            activeRow = row;
+            focusedCol = col;
+            isPlaying = false;
+            showAll = false;
+            render();
+          };
+
+          const span = document.createElement('span');
+          span.textContent = value;
+          
+          const widthConstraint = value < 10 ? col * 1.5 : col * 0.9;
+          const heightConstraint = row * 1.2;
+          span.style.fontSize = `clamp(0.3rem, min(${widthConstraint}vmin, ${heightConstraint}vmin), 3rem)`;
+          span.style.lineHeight = "1";
+
+          cell.appendChild(span);
+          gridContainer.appendChild(cell);
+        }
+      }
+
+      // 3. イベントリスナーの設定
+      showAllBtn.onclick = () => {
+        showAll = true;
+        isPlaying = false;
+        render();
+      };
+
+      prevBtn.onclick = () => {
+        if (focusedCol > 1) {
+          focusedCol--;
+          render();
+        }
+      };
+
+      nextBtn.onclick = () => {
+        if (focusedCol < 9) {
+          focusedCol++;
+          render();
+        }
+      };
+
+      playBtn.onclick = () => {
+        isPlaying = !isPlaying;
+        render();
+      };
+
+      // 初回描画
+      render();
+    }
+
+    // オートプレイの制御
+    function handleTimer() {
+      if (isPlaying) {
+        if (!playTimer) {
+          playTimer = setInterval(() => {
+            if (focusedCol >= 9) {
+              isPlaying = false;
+              render();
+            } else {
+              focusedCol++;
+              render();
+            }
+          }, 1500);
+        }
+      } else {
+        if (playTimer) {
+          clearInterval(playTimer);
+          playTimer = null;
+        }
+      }
+    }
+
+    // 画面の更新（Reactの再レンダリングに相当）
+    function render() {
+      handleTimer();
+
+      // グリッドの更新
+      const cells = gridContainer.children;
+      let index = 0;
+      for (let row = 1; row <= 9; row++) {
+        for (let col = 1; col <= 9; col++) {
+          const cell = cells[index];
+          const isRowActive = showAll || activeRow === row;
+          const isFocused = !showAll && activeRow === row && focusedCol === col;
+
+          cell.className = `flex items-center justify-center overflow-hidden cursor-pointer transition-all duration-300 ease-in-out ${
+            isFocused ? 'ring-4 ring-white shadow-[0_0_20px_rgba(255,255,255,0.4)] z-20 scale-[1.05] rounded-sm' : 'z-0 hover:brightness-125'
+          }`;
+          
+          cell.style.opacity = isRowActive ? 1 : 0.15;
+          cell.style.filter = (isRowActive && !showAll && !isFocused) ? 'brightness(1.1)' : 'none';
+
+          const span = cell.querySelector('span');
+          span.className = `font-bold text-white drop-shadow-md transition-opacity duration-300 ${isRowActive ? 'opacity-100' : 'opacity-0'}`;
+
+          index++;
+        }
+      }
+
+      // 段ボタンの更新
+      const buttons = rowButtonsContainer.children;
+      for (let i = 0; i < 9; i++) {
+        const num = i + 1;
+        buttons[i].className = `py-3 rounded-lg font-bold text-lg transition-all ${
+          !showAll && activeRow === num
+            ? 'bg-white text-neutral-900 shadow-lg scale-105'
+            : 'bg-neutral-800 text-neutral-400 hover:bg-neutral-700'
+        }`;
+      }
+
+      // 「全体を見る」ボタンの更新
+      showAllBtn.className = `col-span-3 py-3 rounded-lg font-bold text-lg transition-all mt-1 ${
+        showAll
+          ? 'bg-neutral-600 text-white shadow-lg'
+          : 'bg-neutral-800 text-neutral-400 hover:bg-neutral-700'
+      }`;
+
+      // 数式領域の表示/非表示と内容更新
+      if (showAll) {
+        formulaContainer.classList.add('opacity-0', 'pointer-events-none');
+        formulaContainer.classList.remove('opacity-100');
+      } else {
+        formulaContainer.classList.remove('opacity-0', 'pointer-events-none');
+        formulaContainer.classList.add('opacity-100');
+        
+        formulaRow.textContent = activeRow;
+        formulaCol.textContent = focusedCol;
+        formulaResult.textContent = activeRow * focusedCol;
+      }
+
+      // コントロールボタンの状態更新
+      prevBtn.disabled = focusedCol === 1;
+      nextBtn.disabled = focusedCol === 9;
+
+      if (isPlaying) {
+        playIcon.classList.add('hidden');
+        pauseIcon.classList.remove('hidden');
+        playText.textContent = '一時停止';
+        playBtn.classList.replace('bg-blue-600', 'bg-amber-600');
+        playBtn.classList.replace('hover:bg-blue-500', 'hover:bg-amber-500');
+      } else {
+        playIcon.classList.remove('hidden');
+        pauseIcon.classList.add('hidden');
+        playText.textContent = '自動で進む';
+        playBtn.classList.replace('bg-amber-600', 'bg-blue-600');
+        playBtn.classList.replace('hover:bg-amber-500', 'hover:bg-blue-500');
+      }
+    }
+
+    // アプリケーションの起動
+    init();
+  </script>
+</body>
+</html>
